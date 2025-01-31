@@ -1,0 +1,54 @@
+import websockets
+import asyncio
+import json
+
+# Binance WebSocket API endpoint for multiple cryptocurrency pairs
+BINANCE_WS_URL = "wss://stream.binance.com:9443/stream?streams=btcusdt@trade/ethusdt@trade/adausdt@trade"
+
+# Set to store unique trade IDs to avoid duplicates
+seen_trade_ids = set()
+
+# Function to handle incoming WebSocket messages
+async def listen_to_crypto_pairs():
+    async with websockets.connect(BINANCE_WS_URL) as websocket:
+        print("Connected to Binance WebSocket. Listening for crypto trades...")
+        while True:
+            try:
+                # Receive real-time data
+                message = await websocket.recv()
+                data = json.loads(message)
+
+                # Extract relevant information
+                stream = data.get('stream')  # Stream name (e.g., btcusdt@trade)
+                trade_data = data.get('data', {})
+                trade_id = trade_data.get('t')  # Unique trade ID
+                symbol = trade_data.get('s')    # Symbol (e.g., BTCUSDT)
+                price = trade_data.get('p')     # Trade price
+                quantity = trade_data.get('q')  # Trade quantity
+                trade_time = trade_data.get('T')  # Trade time (timestamp in milliseconds)
+
+                # Check if the trade ID has already been processed
+                if trade_id not in seen_trade_ids:
+                    seen_trade_ids.add(trade_id)  # Add trade ID to the set
+                    print(f"Symbol: {symbol}, Time: {trade_time}, Price: {price}, Quantity: {quantity}")
+
+            except Exception as e:
+                print(f"Error: {e}")
+                break
+
+# Function to run the WebSocket listener
+def start_listener():
+    try:
+        # Check if an event loop is already running (e.g., in Jupyter Notebook)
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # If no event loop is running, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    # Run the WebSocket listener
+    loop.run_until_complete(listen_to_crypto_pairs())
+
+# Start the listener
+if __name__ == "__main__":
+    start_listener()

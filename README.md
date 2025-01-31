@@ -5,13 +5,13 @@ Trading-System is a folder to practice various trading strategy with python.
 # set up environment
 
 ```bash
-python3.11 -m venv venv 
+python3.11 -m venv .venv 
 
 Windows
-.\venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 
 Linux or Mac
-source venv/bin/activate
+source .venv/bin/activate
 
 After Activated
 pip install -r requirements.txt

@@ -1,0 +1,29 @@
+import asyncio
+import websockets
+import json
+
+async def listen_to_btc_pairs():
+    # List of trading pairs with BTC
+    btc_pairs = [
+        'BTCUSDT', 'BTCETH', 'BTCBNB', 'BTCLTC', 'BTCXRP', 'BTCCAD', 'BTCBUSD'
+    ]
+
+    # Create the WebSocket URL
+    url = "wss://stream.binance.com:9443/ws/" + '/'.join([f"{pair}@ticker" for pair in btc_pairs])
+
+    async with websockets.connect(url) as websocket:
+        print("Connection opened")
+        while True:
+            try:
+                message = await websocket.recv()
+                data = json.loads(message)
+                print(f"Symbol: {data['s']} - Price: {data['c']}")
+            except websockets.ConnectionClosed:
+                print("Connection closed")
+                break
+            except Exception as e:
+                print(f"Error: {e}")
+
+# Run the async function
+if __name__ == "__main__":
+    asyncio.run(listen_to_btc_pairs())
