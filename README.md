@@ -15,6 +15,22 @@ source .venv/bin/activate
 
 After Activated
 pip install -r requirements.txt
+
+# Copy Binance API Credentials into config file
+config.py
+
+# copy config and requirements to containers
+copy .\config.py .\docker\
+copy .\requirements.txt .\docker\
+
+# build docker 
+cd docker
+docker-compose up --buiid
+
+# run streamlit from main directory
+streamlit run .\main.py
+
+
 ```
 
 ## Contributing

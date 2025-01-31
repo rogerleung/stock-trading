@@ -1,153 +1,69 @@
-import requests
-import json
-import time
 from kafka import KafkaProducer
-#from config import *
-import time
-import datetime
-from datetime import date
-from datetime import timedelta
-import os
-topic_name = 'coin'
-servers = 'localhost:9092'
-servers = 'kafka:9092'
-LIMIT = 30
-N = 5
-
-#time.sleep(10)
-print(servers)
-
-import websocket
 import json
-from kafka import KafkaProducer
+from binance.client import Client
+from datetime import datetime, timedelta
+from config import BINANCE_API_KEY, BINANCE_API_SECRET, TRADE_CONFIG
+import time
 
-# List of top 20 USDT pairs
-top_usdt_pairs = [
-    "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
-    # "SOLUSDT", "DOGEUSDT", "DOTUSDT", "MATICUSDT", "TRXUSDT",
-    # "LTCUSDT", "BCHUSDT", "LINKUSDT", "ETCUSDT", "AVAXUSDT",
-    # "SHIBUSDT", "UNIUSDT", "XLMUSDT", "FILUSDT", "VETUSDT"
-]
+# Initialize the Binance client
+# BINANCE_API_KEY = 'your_api_key'  # Replace with your actual API key
+# BINANCE_API_SECRET = 'your_api_secret'  # Replace with your actual API secret
+client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 
 # Kafka configuration
 kafka_broker = 'localhost:9092'  # Change to your Kafka broker address
-kafka_topic = 'binance_tickers'
+output_topic = 'buy_signals'       # The topic to send buy signals to
+
+time.sleep(60) # Wait for the broker to start
 
 # Create a Kafka producer
-producer = KafkaProducer(bootstrap_servers=[kafka_broker])
+producer = KafkaProducer(
+    bootstrap_servers=kafka_broker,
+    value_serializer=lambda x: json.dumps(x).encode('utf-8')
+)
 
-# Binance WebSocket endpoint for the ticker
-base_url = "wss://stream.binance.com:9443/ws"
-
-def on_message(ws, message):
-    data = json.loads(message)
-    print(f"Symbol: {data['s']}, Price: {data['c']}, Volume: {data['v']}")
+# Function to get aggregated minute prices
+def get_minute_prices(symbol):
+    # Get the last 60 minutes of price data
+    now = datetime.utcnow()
+    past = now - timedelta(minutes=60)
     
-    # Log the message and send to Kafka
-    try:
-        producer.send(kafka_topic, value=data)
-        producer.flush()  # Ensure the message is sent before proceeding
-    except Exception as e:
-        print(f"Failed to send message to Kafka: {e}")
+    klines = client.get_historical_klines(symbol, Client.KLINE_INTERVAL_1MINUTE, past.strftime("%d %b %Y %H:%M:%S"), now.strftime("%d %b %Y %H:%M:%S"))
+    
+    # Return the closing prices
+    closing_prices = [float(kline[4]) for kline in klines]  # Closing price is at index 4
+    return closing_prices
 
-def on_error(ws, error):
-    print(error)
+# Main loop to send signals
+try:
+    while True:
+        # Define the symbols you want to monitor
+        symbols = TRADE_CONFIG
 
-def on_close(ws, close_status_code, close_msg):
-    print(f"### closed ### Code: {close_status_code}, Message: {close_msg}")
-
-def on_open(ws):
-    # Subscribe to the ticker for each pair
-    for pair in top_usdt_pairs:
-        ws.send(json.dumps({
-            "method": "SUBSCRIBE",
-            "params": [f"{pair.lower()}@ticker"],
-            "id": 1
-        }))
-
-if __name__ == "__main__":
-    websocket.enableTrace(True)
-    ws = websocket.WebSocketApp(base_url,
-                                on_open=on_open,
-                                on_message=on_message,
-                                on_error=on_error,
-                                on_close=on_close)
-    ws.run_forever()
-
-# while (True):
-
-#     try:
-#         producer = KafkaProducer(bootstrap_servers=[servers])
-#         break
-#     except:
-#         pass
-#     time.sleep(1)
-
-# def requestCoin(coin):
-#     url = f'https://api.binance.com/api/v3/klines?symbol={coin}&interval=1m&limit={LIMIT}'
-#     r = requests.get(url)
-#     data = r.json()
-#     return data
-
-# def getCoins(coin_list):
-#     data = {}
-#     for coin in coin_list:
-#         try:
-#             coin_info = requestCoin(coin)
-#             coin_aka = coin.replace('USDT', '')
-#             data[coin_aka] = coin_info
+        for symbol in symbols:
+            prices = get_minute_prices(symbol)
             
-#         except Exception as e:
-#             print('getCoinsE:', e)
-#         time.sleep(1)
-#     return data
+            if len(prices) >= 3:
+                # Calculate the average of the last three closing prices
+                avg_price = sum(prices[-3:]) / 3
+                current_price = prices[-1]
 
-# def cleanCoin(data, name):
-#     coin_data = {}
-#     coin_data['name'] = name 
-#     now = datetime.datetime.now()
-#     timestart = int(now.timestamp())
-#     coin_data['timestart'] = timestart
-#    # coin_data['price'] = float(data[3])
-#     coin_data['volume'] = float(data[7])
-#    # coin_data['num'] = float(data[8])
-#     coin_data
-#     return coin_data
+                # Simple buy signal logic: Buy if current price is less than average
+                if current_price < avg_price:
+                    timestamp = datetime.utcnow().timestamp()
+                    signal = {
+                        'symbol': symbol,
+                        'signal': 'buy',
+                        'price': current_price,
+                        'timestamp': timestamp
+                    }
+                    producer.send(output_topic, value=signal)
+                    print(f"Sent buy signal: {signal}")
 
-# def sendCoins(data, sleep_time = 5):
-#     name_list = [x for x in data]
-#     for i in range(len(data[name_list[0]])):
-#         for name in name_list:
-#             print(name)
-#             coin = data[name][i]
-#             t0 = (coin[0])
-#             t1 = (coin[6])
-#             volume = coin[7]
-#             d0 = datetime.datetime.fromtimestamp(t0 / 1000 )
-#             d1 = datetime.datetime.fromtimestamp(t1 / 1000 )
-#             send_data = cleanCoin(coin, name)
-#             print(d0, '-->', d1, 'volume: ', volume)  
-#             producer.send(topic_name, json.dumps(send_data).encode('utf-8'))
-#             time.sleep(sleep_time)
-        
-        
-# def getCoinsList():
-#     # url = 'https://api.binance.com/api/v3/ticker/24hr'
-#     # r = requests.get(url)
-#     # df = r.json()
-#     # df = [coin for coin in df if coin["symbol"].endswith("USDT")]
-#     # sdf = sorted(df, key = lambda x: float(x['lastPrice']), reverse = True)[:N]
-#     # return [coin['symbol'] for coin in sdf]
+        # Sleep for a minute before the next check
+        time.sleep(60)
 
-#     return ['BTCUSDT', 'BNBUSDT', 'ETHUSDT', 'DOGEUSDT', 'XRPUSDT', 
-#             'SHIBUSDT', 'ADAUSDT', 'ARBUSDT', 'MATICUSDT', 'SOLUSDT', 'PEPEUSDT']
-
-# coin_list = getCoinsList()
-# while True:
-    
-#     coins = getCoins(coin_list)
-#     sendCoins(coins)
-
-
-producer.close()
-
+except KeyboardInterrupt:
+    print("Signal processor stopped.")
+finally:
+    producer.close()
