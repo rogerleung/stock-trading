@@ -32,15 +32,15 @@ services:
       - kafka
     command: python3 /app/producer.py
 
-  executioner:
-    build:
-      context: .
-      dockerfile: Dockerfile.producer
-    volumes:
-      - ./kafka:/app
-    depends_on:
-      - kafka
-    command: python3 /app/producer.py
+  # executioner:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.producer
+  #   volumes:
+  #     - ./kafka:/app
+  #   depends_on:
+  #     - kafka
+  #   command: python3 /app/producer.py
 
   spark:
     build:

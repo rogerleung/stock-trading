@@ -19,27 +19,29 @@ pip install -r requirements.txt
 # Copy Binance API Credentials into config file
 config.py
 
-# copy config and requirements to containers
-copy .\config.py .\docker\kafka\ 
-copy .\requirements.txt .\docker\
-
 # build docker 
+
+```bash
 cd docker
 docker-compose up --build
 
+# run 
+
+```bash
+python .\producer.py
+python .\executioner.py  
+
 # run streamlit from main directory
+```bash
 streamlit run .\main.py
 
-
-```
-
-## Contributing
+# Contributing
 
 Pull requests are welcome. For major changes, please open an issue first
 to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
 
-## License
+# License
 
 [MIT](https://choosealicense.com/licenses/mit/)

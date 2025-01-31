@@ -2,7 +2,7 @@ from kafka import KafkaConsumer
 import json
 
 # Kafka configuration
-kafka_broker = 'localhost:9092'  # Change to your Kafka broker address
+kafka_broker = 'kafka:9092'  # Change to your Kafka broker address
 kafka_topic = 'binance_tickers'   # The topic to consume from
 
 # Create a Kafka consumer
