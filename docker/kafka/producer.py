@@ -14,7 +14,7 @@ client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 kafka_broker = 'kafka:9092'  # Change to your Kafka broker address
 output_topic = 'buy_signals'       # The topic to send buy signals to
 
-time.sleep(60) # Wait for the broker to start
+# time.sleep(15) # Wait for the broker to start
 
 # Create a Kafka producer
 producer = KafkaProducer(
