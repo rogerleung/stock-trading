@@ -20,12 +20,12 @@ pip install -r requirements.txt
 config.py
 
 # copy config and requirements to containers
-copy .\config.py .\docker\
+copy .\config.py .\docker\kafka\ 
 copy .\requirements.txt .\docker\
 
 # build docker 
 cd docker
-docker-compose up --buiid
+docker-compose up --build
 
 # run streamlit from main directory
 streamlit run .\main.py

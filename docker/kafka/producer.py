@@ -11,7 +11,7 @@ import time
 client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 
 # Kafka configuration
-kafka_broker = 'localhost:9092'  # Change to your Kafka broker address
+kafka_broker = 'kafka:9092'  # Change to your Kafka broker address
 output_topic = 'buy_signals'       # The topic to send buy signals to
 
 time.sleep(60) # Wait for the broker to start
