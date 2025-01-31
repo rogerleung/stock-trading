@@ -2,7 +2,7 @@
 
 Trading-System is a folder to practice various trading strategy with python.
 
-# set up environment
+# Set up environment
 
 ```bash
 python3.11 -m venv .venv 
@@ -15,25 +15,32 @@ source .venv/bin/activate
 
 After Activated
 pip install -r requirements.txt
+```
 
 # Copy Binance API Credentials into config file
-config.py
+copy your credentials into the folowing document
+```
+config.py 
+```
 
 # build docker 
 
 ```bash
 cd docker
 docker-compose up --build
+```
 
 # run 
 
 ```bash
 python .\producer.py
 python .\executioner.py  
+```
 
 # run streamlit from main directory
 ```bash
 streamlit run .\main.py
+```
 
 # Contributing
 
