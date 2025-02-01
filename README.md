@@ -30,7 +30,7 @@ cd docker
 docker-compose up --build
 ```
 
-# run 
+# run strategy and executioner
 
 ```bash
 python .\producer.py
@@ -41,6 +41,12 @@ python .\executioner.py
 ```bash
 streamlit run .\main.py
 ```
+
+# Upcoming Features
+1. Backtesting module and visualisation
+2. Multiple strategy
+3. Attach strategy to orders for analysis
+4. Parameterize strategy for easy deployment and tuning
 
 # Contributing
 
