@@ -47,6 +47,8 @@ streamlit run .\main.py
 2. Multiple strategy
 3. Attach strategy to orders for analysis
 4. Parameterize strategy for easy deployment and tuning
+5. Refine of execution logic (e.g., in case of time out)
+6. Calculate Slppege
 
 # Contributing
 
