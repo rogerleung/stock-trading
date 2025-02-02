@@ -79,12 +79,22 @@ def fetch_orders():
     df['qty_new'] = df['qty'].astype(float)
     df['price_new'] = df['price'].astype(float)
 
-    # Assume PNL is calculated based on executedQty and price
-    # This is a placeholder logic; adjust it based on your actual PNL calculation
-    df['pnl'] = df.apply(lambda row: row['qty_new'] * row['price_new'] if not row['isBuyer'] else -row['qty_new'] * row['price_new'], axis=1)
-    df['cumulative_pnl'] = df['pnl'].cumsum()
+    # Read trade-record.csv
+    trade_record_df = pd.read_csv('trade-record.csv')
 
-    return df
+    # Merge with trade_record_df on 'orderId'
+    merged_df = df.merge(trade_record_df, how='left', left_on='orderId', right_on='orderId')
+
+    # Calculate PNL based on strategy
+    merged_df['pnl'] = merged_df.apply(
+        lambda row: row['qty_new'] * row['price_new'] if not row['isBuyer'] else -row['qty_new'] * row['price_new'],
+        axis=1
+    )
+
+    # Cumulative PNL by strategy
+    merged_df['cumulative_pnl'] = merged_df.groupby('Strategy')['pnl'].cumsum()
+
+    return merged_df
 
 with col1:
     st.subheader("detailed order information")

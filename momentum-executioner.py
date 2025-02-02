@@ -1,6 +1,7 @@
 from kafka import KafkaConsumer, KafkaAdminClient
 import json
 from binance.client import Client
+import config
 from config import BINANCE_API_KEY, BINANCE_API_SECRET, TRADE_CONFIG
 from datetime import datetime, timedelta
 import time
@@ -8,6 +9,7 @@ import threading
 import csv
 import os
 from binance.exceptions import BinanceAPIException  # Import the exception
+import importlib  # To reload the module
 
 # Initialize the Binance client
 client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
@@ -17,6 +19,12 @@ kafka_broker = 'localhost:9094'  # Change to your Kafka broker address
 
 # Set a static topic name
 topic_name = "buy_signal"
+
+# ANSI escape codes for coloring text
+class LogColors:
+    GREEN = '\033[92m'  # Green text
+    YELLOW = '\033[93m'  # Yellow text
+    RESET = '\033[0m'  # Reset to default
 
 # Function to check if the topic exists
 def topic_exists(topic):
@@ -51,8 +59,8 @@ consumer = KafkaConsumer(
 print('created consumer')
 print(f"Listening for buy signals on topic: {topic_name}...")
 
-# Dictionary to track trades
-trades_count = {}
+# Load initial configuration
+trade_config = TRADE_CONFIG.copy()
 
 # Function to log trades to CSV
 def log_trade(order_type, symbol, quantity, orderId, strategy):
@@ -73,10 +81,29 @@ def submit_reverse_order(symbol, quantity):
             symbol=symbol,
             quantity=quantity,
         )
-        print(f"Submitted reverse sell order for {symbol}: {order}")
+        print(f"{LogColors.GREEN}Submitted reverse sell order for {symbol}: {order}{LogColors.RESET}")
         log_trade('sell', symbol, quantity, order['orderId'], strategy)  # Log the sell order
     except BinanceAPIException as e:
-        print(f"Failed to submit reverse sell order for {symbol}: {e.message}")  # Log the error
+        print(f"{LogColors.YELLOW}Failed to submit reverse sell order for {symbol}: {e.message}{LogColors.RESET}")  # Log the error
+
+# Function to check for configuration changes
+def check_config_changes():
+    global trade_config
+    while True:
+        importlib.reload(config)  # Reload the config module
+        new_trade_config = config.TRADE_CONFIG.copy()
+        if new_trade_config != trade_config:
+            print("Configuration has changed.")
+            trade_config = new_trade_config  # Update the trade config
+        time.sleep(0.1)  # Wait for 0.1 seconds before checking again
+
+# Start the configuration checking thread
+config_thread = threading.Thread(target=check_config_changes)
+config_thread.daemon = True  # Daemonize thread
+config_thread.start()
+
+# Dictionary to track trades
+trades_count = {}
 
 # Consume messages
 try:
@@ -100,7 +127,7 @@ try:
             symbol = signal['symbol']
             price = signal['price']
             strategy = signal.get('strategy', 'unknown')  # Get strategy from the message
-            usdt_amount, trading_enabled, max_trades_per_hour = TRADE_CONFIG.get(symbol, (0, False, 0))
+            usdt_amount, trading_enabled, max_trades_per_hour = trade_config.get(symbol, (0, False, 0))
             current_time = datetime.now()
 
             # Initialize trade count for the symbol if not already
@@ -124,7 +151,7 @@ try:
                         quantity=quantity,
                         # Receive full price
                     )
-                    print(f"Submitted buy order for {symbol}: {order}")
+                    print(f"{LogColors.GREEN}Submitted buy order for {symbol}: {order}{LogColors.RESET}")
 
                     # Log the buy order
                     log_trade('buy', symbol, quantity, order['orderId'], strategy)  # Use strategy from message
@@ -136,12 +163,12 @@ try:
                     reverse_order_thread = threading.Thread(target=submit_reverse_order, args=(symbol, quantity))
                     reverse_order_thread.start()
                 except BinanceAPIException as e:
-                    print(f"Failed to submit buy order for {symbol}: {e.message}")  # Log the error
+                    print(f"{LogColors.YELLOW}Failed to submit buy order for {symbol}: {e.message}{LogColors.RESET}")  # Log the error
             else:
                 if not trading_enabled:
-                    print(f"Trading disabled for {symbol}. No order submitted.")
+                    print(f"{LogColors.YELLOW}Trading disabled for {symbol}. No order submitted.{LogColors.RESET}")
                 else:
-                    print(f"Max trades reached for {symbol} in the last hour. No order submitted.")
+                    print(f"{LogColors.YELLOW}Max trades reached for {symbol} in the last hour. No order submitted.{LogColors.RESET}")
 
 except KeyboardInterrupt:
     print("Consumer stopped.")
